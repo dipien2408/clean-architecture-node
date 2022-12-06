@@ -1,0 +1,56 @@
+require("log-timestamp")(function () {
+  return "[" + new Date().toLocaleString("vi-VN") + "] %s";
+});
+require("events").EventEmitter.prototype._maxListeners = 200;
+require("../lib/infrastructure/config");
+
+const mongodb = require("../lib/infrastructure/database/mongodb/connection");
+mongodb.init(global.gConfig.database);
+const redisServer = require("../lib/infrastructure/database/redis/connection");
+redisServer.connect();
+
+const app = require("../app");
+const port = normalizePort(global.gConfig.node_port);
+app.set("port", port);
+
+const server = require("http").createServer(app);
+server.listen(port, onListen);
+server.on("error", onError);
+
+global.process.on("unhandledRejection", (error, promise) => {
+  console.log("Oh Lord! We forgot to handle a promise rejection here: ", promise);
+  console.log(" The error was: ", error);
+});
+
+function normalizePort(val) {
+  var port = parseInt(val, 10);
+
+  if (isNaN(port)) return val;
+  if (port >= 0) return port;
+
+  return false;
+}
+
+function onError(error) {
+  if (error.syscall !== "listen") throw error;
+
+  const bind = typeof port === "string" ? "Pipe " + port : "Port " + port;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case "EACCES":
+      console.error(bind + " requires elevated privileges");
+      global.process.exit(1);
+      break;
+    case "EADDRINUSE":
+      console.error(bind + " is already in use");
+      global.process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+function onListen() {
+  console.log("serverHttp listening on PORT %d", port);
+}
